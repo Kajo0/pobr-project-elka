@@ -39,6 +39,9 @@ public class ViewFrame extends JFrame {
 	/** Start image processing => recognition button */
 	private JButton processButton;
 	
+	/** Start image processing also on inverted image => recognition button */
+	private JButton processInvertButton;
+	
 	/** Reset image processor instance - for moment range calculations button */
 	private JButton newProcessButton;
 	
@@ -57,7 +60,7 @@ public class ViewFrame extends JFrame {
 
 		setBounds(100, 100, 300, 500);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setLayout(new GridLayout(6, 1));
+		setLayout(new GridLayout(7, 1));
 		setVisible(true);
 
 		init();
@@ -71,6 +74,7 @@ public class ViewFrame extends JFrame {
 		openButton = new JButton("Choose image to recognition");
 		repaintButton = new JButton("Paint first loaded image");
 		processButton = new JButton("Single recognition");
+		processInvertButton = new JButton("Single recognition with invertion");
 		newProcessButton = new JButton("Clear segmented images");
 		calculateMomentsButton = new JButton("Calculate range of moments");
 		iterateProcess = new JButton("Iterate segmentation");
@@ -146,7 +150,20 @@ public class ViewFrame extends JFrame {
 			public void actionPerformed(ActionEvent arg0) {
 				if (imageHolder.getAmount() != 0) {
 					imageProcessor = new ImageProcessor(imageHolder.getImage());
-					imageProcessor.process();
+					imageProcessor.process(false);
+				}
+			}
+		};
+
+		/**
+		 * Do recognition also on inverted image if at least one image loaded
+		 */
+		ActionListener processInvertAction = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if (imageHolder.getAmount() != 0) {
+					imageProcessor = new ImageProcessor(imageHolder.getImage());
+					imageProcessor.process(true);
 				}
 			}
 		};
@@ -218,6 +235,7 @@ public class ViewFrame extends JFrame {
 		openButton.addActionListener(openAction);
 		repaintButton.addActionListener(repaintAction);
 		processButton.addActionListener(processAction);
+		processInvertButton.addActionListener(processInvertAction);
 		newProcessButton.addActionListener(newProcessAction);
 		iterateProcess.addActionListener(iterateAction);
 		calculateMomentsButton.addActionListener(calculateMomentsAction);
@@ -229,6 +247,7 @@ public class ViewFrame extends JFrame {
 		pane.add(openButton);
 		pane.add(repaintButton);
 		pane.add(processButton);
+		pane.add(processInvertButton);
 		pane.add(newProcessButton);
 		pane.add(iterateProcess);
 		pane.add(calculateMomentsButton);
