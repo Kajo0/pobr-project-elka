@@ -8,9 +8,24 @@ import java.awt.image.MemoryImageSource;
 import java.util.ArrayList;
 import java.util.Collections;
 
+/**
+ * Static class mostly with filters and creating image from array of pixels\
+ * 
+ * @author Mikolaj Markiewicz
+ */
 public class Utilities {
 
+	/**
+	 * Increase image contrast by stretching histogram and next increasing contrast of 'stretched' image
+	 * 
+	 * @param pixels Image as pixels
+	 * @param a Amount of increasing
+	 * @return Increased contrast image as pixels
+	 */
 	public static Pixel[][] increaseContrastPixels(final Pixel[][] pixels, final double a) {
+		/*
+		 * Create empty lut table for RGB components
+		 */
 		int[][] lut = new int[3][256];
 
 		for (int i = 0; i < 256; ++i) {
@@ -19,6 +34,9 @@ public class Utilities {
 			lut[2][i] = 0;
 		}
 
+		/*
+		 * Find min and max value of each component, building histogram
+		 */
 		int rMin = 255;
 		int gMin = 255;
 		int bMin = 255;
@@ -41,10 +59,16 @@ public class Utilities {
 				bMax = (pixels[x][y].b > bMax ? pixels[x][y].b : bMax);
 			}
 
+		/*
+		 * Stretch histogram
+		 */
 		lut[0] = updateLUT(255.0 / (rMax - rMin), -rMin);
 		lut[1] = updateLUT(255.0 / (gMax - gMin), -gMin);
 		lut[2] = updateLUT(255.0 / (bMax - bMin), -bMin);
 		
+		/*
+		 * Increase consrast
+		 */
 		for (int i = 0; i < 256; ++i) {
 			double l;
 			l = a * (i - rMax / 2) + rMax / 2;
@@ -60,14 +84,24 @@ public class Utilities {
 			lut[2][i] = (lut[2][i] < 0 ? 0 : lut[2][i] > 255 ? 255 : lut[2][i]);
 		}
 
+		/*
+		 * Create result pixels image
+		 */
 		Pixel[][] result = new Pixel[pixels.length][pixels[0].length];
 		for (int x = 0; x < pixels.length; ++x)
-			for (int y = 0; y < pixels[0].length; ++y) {
+			for (int y = 0; y < pixels[0].length; ++y)
 				result[x][y] = new Pixel(lut[0][pixels[x][y].r], lut[1][pixels[x][y].g], lut[2][pixels[x][y].b]);
-			}
+
 		return result;
 	}
 
+	/**
+	 * Used to stretch histogram in lut table
+	 * 
+	 * @param a First variable
+	 * @param b Second variable
+	 * @return Streatched lut table
+	 */
 	public static int[] updateLUT(double a, int b) {
 		int[] lut = new int[256];
 
@@ -82,10 +116,20 @@ public class Utilities {
 		return lut;
 	}
 
-	/*
-	 * Unsharp Begin
-	 */
+	
+	/********************
+	 * Unsharp Begin	*
+	 *******************/
 
+	/**
+	 * Filter image by unsharp mask
+	 * 
+	 * @param pixels Image as pixels
+	 * @param amount Amount
+	 * @param radius Radius of blur
+	 * @param threshold Threshold
+	 * @return Unsharped image as pixels
+	 */
 	public static Pixel[][] unsharpPixels(final Pixel[][] pixels, final float amount, final int radius,
 																								final int threshold) {
 		int width = pixels.length;
@@ -116,6 +160,12 @@ public class Utilities {
 		return result;
 	}
 
+	/**
+	 * Create Gaussian kernel for unsharp filter
+	 * 
+	 * @param radius Radius
+	 * @return Array of calculated variables
+	 */
 	static float[] unsharpPixelsCreateGaussianKernel(final int radius) {
 		if (radius < 1)
 			throw new IllegalArgumentException("Radius must be >= 1");
@@ -139,7 +189,17 @@ public class Utilities {
 
 		return data;
 	}
-	
+
+	/**
+	 * Specific blur by pixels with Gaussian kernel
+	 * 
+	 * @param pixels Image as integer value of pixels
+	 * @param width Width of image
+	 * @param height Height of image
+	 * @param kernel Gaussian kernel
+	 * @param radius Radius
+	 * @return Blurred image as integer value pixels
+	 */
 	static int[] unsharpPixelsBlur(final int[] pixels, final int width, final int height, final float[] kernel,
 																									final int radius) {
 		int[] result = new int[width * height];
@@ -190,7 +250,18 @@ public class Utilities {
 
 		return result;
 	}
-	
+
+	/**
+	 * Specific sharpen filter used by unsharp filter
+	 * 
+	 * @param original Image as integer values of original pixels
+	 * @param blurred Image as integer values of blurred image pixels
+	 * @param width Width of image
+	 * @param height Height of image
+	 * @param amount Amount
+	 * @param threshold Threshold
+	 * @return Sharpen image as integer values of pixels
+	 */
 	static int[] unsharpPixelsSharpen(final int[] original, final int[] blurred, final int width, final int height,
 																			final float amount, final int threshold) {
 		int[] result = new int[width * height];
@@ -238,10 +309,18 @@ public class Utilities {
 		return result;
 	}
 	
-	/*
-	 * Unsharp End
+	/****************
+	 * Unsharp End	*
+	 ***************/
+
+	/**
+	 * Ranking filter on given image
+	 * 
+	 * @param pixels Image as pixels
+	 * @param maskSize Odd size of mask
+	 * @param value Value to get from ranking array
+	 * @return 'Ranked' image as pixels
 	 */
-	
 	public static Pixel[][] rankinkgFilterPixels(final Pixel[][] pixels, final int maskSize, final int value) {
 		if (maskSize % 2 == 0)
 			throw new IllegalArgumentException("Mask size % 2 = 0!");
@@ -276,6 +355,14 @@ public class Utilities {
 		return tmp;
 	}
 
+	/**
+	 * Convert RGB values of pixel int HSV palette
+	 *  
+	 * @param red Red value
+	 * @param green Green value
+	 * @param blue Blue value
+	 * @return Array of HSV values of pixel
+	 */
 	public static double[] rgbToHsv(final double red, final double green, final double blue) {
 		double hue = -1, sat = -1, val = -1;
 		double result[] = new double[3];
@@ -309,8 +396,15 @@ public class Utilities {
 
 		return result;
     }
-	
-	public static Pixel[][] binarizePixels(final Pixel[][] pixels, final int treshold) {
+
+	/**
+	 * Thresholding filter
+	 * 
+	 * @param pixels Image as pixels
+	 * @param threshold Threshold value
+	 * @return Binarized image as pixels 
+	 */
+	public static Pixel[][] binarizePixels(final Pixel[][] pixels, final int threshold) {
 		int width = pixels.length;
 		int height = pixels[0].length;
 
@@ -324,7 +418,7 @@ public class Utilities {
 
 				double[] hsv = rgbToHsv(r, g, b);
 
-				if (r > treshold && g > treshold && b > treshold)
+				if (r > threshold && g > threshold && b > threshold)
 					tmp[x][y] = new Pixel(255, 255, 255);
 //				else if (g > 130 && b > 130) // Green boxik
 //					tmp[x][y] = new Pixel(255, 255, 255);
@@ -336,7 +430,14 @@ public class Utilities {
 
 		return tmp;
 	}
-	
+
+	/**
+	 * Blur filter by mask
+	 * Nothing special made from that
+	 * 
+	 * @param pixels Image as pixels
+	 * @return Blurred image as pixels
+	 */
 	public static Pixel[][] blurPixels(final Pixel[][] pixels) {
 		int[][] blurMask = { { 1, 2, 1 }, { 2, 4, 2 }, { 1, 2, 1 } };
 
@@ -401,6 +502,12 @@ public class Utilities {
 		return tmp;
 	}
 
+	/**
+	 * Create image from array of pixels
+	 * 
+	 * @param pixels Image as pixels
+	 * @return Created image from pixels
+	 */
 	public static BufferedImage createImageFromPixels(final Pixel[][] pixels) {
 		int[] tmp = new int[pixels.length * pixels[0].length];
 

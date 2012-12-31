@@ -1,27 +1,48 @@
 package pl.edu.pw.elka.mmarkiew.model;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Random;
-
 import pl.edu.pw.elka.mmarkiew.view.ImagePainter;
 
+/**
+ * Class responsible for finding logo from segments
+ * Compare sizes and position
+ * 
+ * @author Mikolaj Markiewicz
+ */
 public class Finder {
 
+	/** List of segments */
 	private ArrayList<Segment> segments = new ArrayList<>();
-	private ArrayList<Segment> possibleSegments = new ArrayList<>();
-	private ArrayList<AMDSegment> amdSegments = new ArrayList<>();
 	
+	/** List of segments which possible made logo */
+	private ArrayList<Segment> possibleSegments = new ArrayList<>();
+	
+	/** List of found AMD segments */
+	private ArrayList<AMDSegment> amdSegments = new ArrayList<>();
+
+	/**
+	 * C-tor
+	 * 
+	 * @param segments Segments to find in
+	 */
 	public Finder(ArrayList<Segment> segments) {
 		this.segments = segments;
 	}
 
+	/**
+	 * Find logo from given segments
+	 */
 	public void find() {
+		// Check whether segment is possible part of logo
 		for (Segment segment : segments)
 			findIfPossibleSegments(segment);
 
+		// Find whole logo from possible segments
 		findAMD();
 
+		/*
+		 * Mark found logos and show them in new window
+		 */
 		Pixel[][] pixels = new Pixel[segments.get(0).imageWidth][segments.get(0).imageHeight];
 		for (int x = 0; x < pixels.length; ++x)
 			for (int y = 0; y < pixels[0].length; ++y)
@@ -34,25 +55,36 @@ public class Finder {
 				pixels[point.x][point.y].b = (segment.type == SegmentType.LETTER_D ? 255 : 0);
 			}
 		
-		new ImagePainter(Utilities.createImageFromPixels(pixels));
+		new ImagePainter(Utilities.createImageFromPixels(pixels), "Marked segments");
 	}
 	
+	/**
+	 * Check whether segment is possible search segment
+	 * 
+	 * @param segment Segment to check
+	 */
 	private void findIfPossibleSegments(Segment segment) {
-//							M7 -> M3 -> W7 -> W8 -> W9 -> M1
+		/*
+		 * Get probability of assigning to each searching segment type
+		 */
 		double aProbability = checkIfA(segment);
 		double mProbability = checkIfM(segment);
 		double dProbability = checkIfD(segment);
-		
+
+		/*
+		 * If found probability as any segment add to possible
+		 */
 		if (aProbability > 0 || mProbability > 0 || dProbability > 0) {
 			aProbability = (aProbability == 0 ? 9999 : aProbability);
 			mProbability = (mProbability == 0 ? 9999 : mProbability);
 			dProbability = (dProbability == 0 ? 9999 : dProbability);
 
 			possibleSegments.add(segment);
-//			System.out.println(segment);
-//			SegmentType[] t = {SegmentType.LETTER_A, SegmentType.LETTER_M, SegmentType.LETTER_D};
-//			segment.type = t[new Random().nextInt(3)];
-			
+
+			/*
+			 * Less probability, means better adaptation to segment
+			 * Mark segments what they are => set its type
+			 */
 			if (aProbability < mProbability) {
 				if (aProbability < dProbability)
 					segment.type = SegmentType.LETTER_A;
@@ -64,18 +96,31 @@ public class Finder {
 				segment.type = SegmentType.LETTER_M;
 			else
 				segment.type = SegmentType.LETTER_D;
+			
+			segment.typeProbability = Math.min(aProbability, Math.min(mProbability, dProbability));
 		}
 	}
 
+	/**
+	 * Check probability of assigning to A letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
 	private double checkIfA(Segment segment) {
-		double M7 = 0.015235764667050448,	m7l = 0.01167020015456442,	m7r = 0.018087107026053546;
-		double W8 = 0.21031196473853922,	w8l = 0.16399082568807338,	w8r = 0.3018867924528302;
-		double W7 = 0.09618590622537318,	w7l = 0.05555555555555555,	w7r = 0.2222222222222222;
-		double W9 = 0.4312677287886182,	w9l = 0.37632973406571524,	w9r = 0.5350804078205331;
+		/*
+		 * Computed ranges
+		 */
+		double M7 = 0.015235764667050448,	m7l = 0.01167020015456442,		m7r = 0.018087107026053546;
+		double W8 = 0.21031196473853922,	w8l = 0.16399082568807338,		w8r = 0.3018867924528302;
+		double W7 = 0.09618590622537318,	w7l = 0.05555555555555555,		w7r = 0.2222222222222222;
+		double W9 = 0.4312677287886182,		w9l = 0.37632973406571524,		w9r = 0.5350804078205331;
 		double M3 = 0.010209099157830432,	m3l = 0.0044628508989242545,	m3r = 0.020645000937991043;
-		double M1 = 0.2818378848836348,	m1l = 0.22242647058823528,	m1r = 0.33691269979583216;
+		double M1 = 0.2818378848836348,		m1l = 0.22242647058823528,		m1r = 0.33691269979583216;
 
-//		double lr = 0.5, rl = 1.5;
+		/*
+		 * Left, right expand
+		 */
 		double lr = 0.7, rl = 1.3;
 		
 		m7l *= lr;
@@ -90,9 +135,12 @@ public class Finder {
 		m3r *= rl;
 		m1l *= lr;
 		m1r *= rl;
-		
+
 		double prob = 0;
 
+		/*
+		 * Check if match in range
+		 */
 		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
 			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
 
@@ -122,7 +170,16 @@ public class Finder {
 		return 0;
 	}
 
+	/**
+	 * Check probability of assigning to M letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
 	private double checkIfM(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
 		double M7 = 0.017500501180688226,	m7l = 0.010851376029452724,	m7r = 0.022203063652607036;
 		double W8 = 0.19308847931575132,	w8l = 0.15454545454545454,	w8r = 0.29850746268656714;
 		double W7 = 0.09638430564907972,	w7l = 0.0,	w7r = 0.1724137931034483;
@@ -130,7 +187,9 @@ public class Finder {
 		double M3 = 1.9592520533750948E-4,	m3l = 2.0053774453794264E-6,	m3r = 8.394500479036301E-4;
 		double M1 = 0.30006058856181006,	m1l = 0.2145311470740088,	m1r = 0.426053517064573;
 
-//		double lr = 0.7, rl = 1.3;
+		/*
+		 * Left, right expand
+		 */
 		double lr = 0.8, rl = 1.2;
 		
 		m7l *= lr;
@@ -148,6 +207,9 @@ public class Finder {
 		
 		double prob = 0;
 
+		/*
+		 * Check if match in range
+		 */
 		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
 			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
 
@@ -177,7 +239,16 @@ public class Finder {
 		return 0;
 	}
 
+	/**
+	 * Check probability of assigning to D letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
 	private double checkIfD(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
 		double M7 = 0.020365120630589456,	m7l = 0.012886541408450096,	m7r = 0.023036918303589227;
 		double W8 = 0.19332569667910052,	w8l = 0.15995260663507108,	w8r = 0.26666666666666666;
 		double W7 = 0.2233540174872819,	w7l = 0.11764705882352941,	w7r = 0.2962962962962963;
@@ -185,7 +256,9 @@ public class Finder {
 		double M3 = 0.0014564929351270149,	m3l = 3.817088406910104E-4,	m3r = 0.0030419047356112423;
 		double M1 = 0.3277085894576783,	m1l = 0.23766447368421054,	m1r = 0.40262575472343864;
 
-//		double lr = 0.8, rl = 1.3;
+		/*
+		 * Left, right expand
+		 */
 		double lr = 0.8, rl = 1.4;
 		
 		m7l *= lr;
@@ -203,6 +276,9 @@ public class Finder {
 		
 		double prob = 0;
 
+		/*
+		 * Check if match in range
+		 */
 		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
 			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
 
@@ -232,11 +308,21 @@ public class Finder {
 		return 0;
 	}
 
+	/**
+	 * Check corresponding sizes, distances and directions to find logos
+	 * Add found logos into amdSemgnets list
+	 */
 	private void findAMD() {
+		/*
+		 * List of each segments type
+		 */
 		ArrayList<Segment> aSegments = new ArrayList<>();
 		ArrayList<Segment> mSegments = new ArrayList<>();
 		ArrayList<Segment> dSegments = new ArrayList<>();
 
+		/*
+		 * Assign them onto proper list
+		 */
 		for (Segment segment : possibleSegments)
 			if (segment.type == SegmentType.LETTER_A)
 				aSegments.add(segment);
@@ -245,33 +331,60 @@ public class Finder {
 			else if (segment.type == SegmentType.LETTER_D)
 				dSegments.add(segment);
 
+		/*
+		 * Go through each segments
+		 */
 		for (Segment aSeg : aSegments) {
 			int aMaxSize = Math.max(aSeg.getSegmentWidth(), aSeg.getSegmentHeight());
 
+			/*
+			 * With next one
+			 */
 			for (Segment mSeg : mSegments) {
+				// Calculate distance between weight centers of considered segments
 				double ddd = pointToPointDistance(aSeg.xWeightCenter(), aSeg.yWeightCenter(), mSeg.xWeightCenter(),
 																								mSeg.yWeightCenter());
 
 				int mMaxSize = Math.max(mSeg.getSegmentWidth(), mSeg.getSegmentHeight());
 
+				/*
+				 * If distance is not to big
+				 */
 				if (ddd < aMaxSize / 2 + mMaxSize / 2 +
 													Math.min(aSeg.getSegmentWidth(), aSeg.getSegmentHeight()) * 0.4)
+					/*
+					 * Go through next one
+					 */
 					for (Segment dSeg : dSegments) {
+						// Calculate next distance
 						double dd = pointToPointDistance(mSeg.xWeightCenter(), mSeg.yWeightCenter(),
 																		dSeg.xWeightCenter(), dSeg.yWeightCenter());
 
 						int dMaxSize = Math.max(dSeg.getSegmentWidth(), dSeg.getSegmentHeight());
 
+						/*
+						 * If distance is appropriate
+						 */
 						if (dd < mMaxSize / 2 + dMaxSize / 2 +
 													Math.min(dSeg.getSegmentWidth(), dSeg.getSegmentHeight()) * 0.4) {
+							// Calc distance between first and third segmnet
 							double d = pointToPointDistance(aSeg.xWeightCenter(), aSeg.yWeightCenter(),
 																dSeg.xWeightCenter(), dSeg.yWeightCenter());
 
+							/*
+							 * If there has proper ratio
+							 */
 							if (d > ddd && d > dd)
+								/*
+								 * And if there are in similar size
+								 */
 								if (Math.max(aMaxSize, mMaxSize) / Math.min(aMaxSize, mMaxSize) < 4 &&
 										Math.max(mMaxSize, dMaxSize) / Math.min(mMaxSize, dMaxSize) < 4 &&
 										Math.max(aMaxSize, dMaxSize) / Math.min(aMaxSize, dMaxSize) < 4) {
 
+									/*
+									 * Calc direction
+									 */
 									double amAngle = Math.abs(Math.atan2(aSeg.yWeightCenter() - mSeg.yWeightCenter(),
 																			aSeg.xWeightCenter() - mSeg.xWeightCenter()));
 									double mdAngle = Math.abs(Math.atan2(mSeg.yWeightCenter() - dSeg.yWeightCenter(),
@@ -279,12 +392,21 @@ public class Finder {
 									double adAngle = Math.abs(Math.atan2(aSeg.yWeightCenter() - dSeg.yWeightCenter(),
 																			aSeg.xWeightCenter() - dSeg.xWeightCenter()));
 	
+									/*
+									 * Get average direction and set accept differ
+									 */
 									double aver = (amAngle + mdAngle + adAngle) / 3;
 									double dt = 0.3;
 									
+									/*
+									 * If they are in the same line
+									 */
 									if (amAngle > aver - dt && amAngle < aver + dt &&
 											mdAngle > aver - dt && mdAngle < aver + dt &&
 											adAngle > aver - dt && adAngle < aver + dt)
+										/*
+										 * Add AMD logo into list as found logos!
+										 */
 										amdSegments.add(new AMDSegment(aSeg, mSeg, dSeg));
 								}
 						}
@@ -292,14 +414,28 @@ public class Finder {
 			}
 		}
 	}
-	
+
+	/**
+	 * Calculate distance between points
+	 * 
+	 * @param x1
+	 * @param y1
+	 * @param x2
+	 * @param y2
+	 * @return Distance between points
+	 */
 	private double pointToPointDistance(int x1, int y1, int x2, int y2) {
 		int x = x2 - x1;
 		int y = y2 - y1;
 
 		return Math.sqrt(x * x + y * y);
 	}
-	
+
+	/**
+	 * Get found AMD segments
+	 * 
+	 * @return List of found segments
+	 */
 	public ArrayList<AMDSegment> getAMDSegments() {
 		return this.amdSegments;
 	}

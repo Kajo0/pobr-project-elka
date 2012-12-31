@@ -8,14 +8,54 @@ import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+/**
+ * Image painter to paint images in new window
+ * 
+ * @author Mikolaj Markiewicz
+ */
+@SuppressWarnings("serial")
 public class ImagePainter extends JFrame {
 
+	/** Panel to paint on it */
 	private JPanel panel;
+	
+	/** Image to paint */
+	private BufferedImage image;
 
+	/**
+	 * C-tor
+	 * Paints image in new window
+	 * 
+	 * @param image Image to paint
+	 */
 	public ImagePainter(final BufferedImage image) {
-		super("Image");
+		super("Painted image");
 
-		setBounds(600, 100, 500, 500);
+		this.image = image;
+		
+		initFrame();
+	}
+
+	/**
+	 * C-tor
+	 * Paints image in new window with given title
+	 * 
+	 * @param image Image to paint
+	 * @param title Title of window
+	 */
+	public ImagePainter(final BufferedImage image, String title) {
+		super(title);
+
+		this.image = image;
+		
+		initFrame();
+	}
+
+	/**
+	 * Init window parameters and paint image
+	 */
+	private void initFrame() {
+		setBounds(500, 100, 900, 700);
 		setVisible(true);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 

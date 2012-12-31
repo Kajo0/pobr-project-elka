@@ -1,15 +1,11 @@
 package pl.edu.pw.elka.mmarkiew.view;
 
 import java.awt.Container;
-import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.ArrayList;
-
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -20,44 +16,75 @@ import javax.swing.filechooser.FileFilter;
 import pl.edu.pw.elka.mmarkiew.model.ImageHolder;
 import pl.edu.pw.elka.mmarkiew.model.ImageProcessor;
 
+/**
+ * Main App Frame
+ * 
+ * @author Mikolaj Markiewicz
+ */
+@SuppressWarnings("serial")
 public class ViewFrame extends JFrame {
 
+	/** Gather chosen images */
 	private ImageHolder imageHolder;
+	
+	/** Image processor instance */
 	private ImageProcessor imageProcessor;
+	
+	/** File chooser opening button */
 	private JButton openButton;
+	
+	/** Paint loaded image button */
 	private JButton repaintButton;
+	
+	/** Start image processing => recognition button */
 	private JButton processButton;
+	
+	/** Reset image processor instance - for moment range calculations button */
 	private JButton newProcessButton;
+	
+	/** Iterate segmentation for loaded images button */
 	private JButton iterateProcess;
+	
+	/** Moment range calculation for segmented images from iteration button */
 	private JButton calculateMomentsButton;
 
+	/**
+	 * C-tor
+	 * Creates window
+	 */
 	public ViewFrame() {
-		super("POBR");
+		super("POBR - AMD recognition");
 
-		setBounds(100, 100, 500, 200);
+		setBounds(100, 100, 300, 500);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setLayout(new GridLayout());
+		setLayout(new GridLayout(6, 1));
 		setVisible(true);
 
 		init();
 	}
 
+	/**
+	 * Initialize buttons
+	 */
 	private void init() {
 
-		openButton = new JButton("Open");
-		repaintButton = new JButton("Repaint");
-		processButton = new JButton("Single Process");
-		newProcessButton = new JButton("New Process");
-		calculateMomentsButton = new JButton("Calc Moments");
-		iterateProcess = new JButton("Iterate");
+		openButton = new JButton("Choose image to recognition");
+		repaintButton = new JButton("Paint first loaded image");
+		processButton = new JButton("Single recognition");
+		newProcessButton = new JButton("Clear segmented images");
+		calculateMomentsButton = new JButton("Calculate range of moments");
+		iterateProcess = new JButton("Iterate segmentation");
 
 
+		/**
+		 * Open image chooser
+		 */
 		final ActionListener openAction = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser chooser = new JFileChooser();
+				chooser.setMultiSelectionEnabled(true);
 				chooser.setAcceptAllFileFilterUsed(false);
 				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-				chooser.setMultiSelectionEnabled(true);
 
 				chooser.setFileFilter(new FileFilter() {
 					@Override
@@ -67,7 +94,8 @@ public class ViewFrame extends JFrame {
 
 						String ext = getExtension(file);
 						if (ext != null)
-							if (ext.equals("png") || ext.equals("gif") || ext.equals("bmp") || ext.equals("jpg"))
+							if (ext.equals("png") || ext.equals("gif") || ext.equals("bmp") || ext.equals("jpg") ||
+																									ext.equals("jpeg"))
 								return true;
 
 						return false;
@@ -86,26 +114,33 @@ public class ViewFrame extends JFrame {
 
 					@Override
 					public String getDescription() {
-						return "png, jpg, gif, bmp";
+						return "Images (png, jpg, gif, bmp)";
 					}
 				});
 
 				chooser.showOpenDialog(ViewFrame.this);
 				File[] files = chooser.getSelectedFiles();
 
+				// Put images into holder
 				if (files != null)
 					imageHolder = new ImageHolder(files);
 			}
 		};
 
+		/**
+		 * Paint first loaded image if at least one loaded
+		 */
 		ActionListener repaintAction = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (imageHolder != null && imageHolder.getAmount() != 0)
-					new ImagePainter(imageHolder.getImage());
+					new ImagePainter(imageHolder.getImage(), imageHolder.getName(0));
 			}
 		};
 
+		/**
+		 * Do recognition if at least one image loaded
+		 */
 		ActionListener processAction = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -116,14 +151,20 @@ public class ViewFrame extends JFrame {
 			}
 		};
 		
+		/**
+		 * Create new image processor if at least one image loaded
+		 */
 		ActionListener newProcessAction = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				if (imageHolder.getAmount() != 0)
+				if (imageHolder != null && imageHolder.getAmount() != 0)
 					imageProcessor = new ImageProcessor(imageHolder.getImage());
 			}
 		};
-		
+
+		/**
+		 * Calculate moments for segmented images
+		 */
 		final ActionListener calculateMomentsAction = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -132,6 +173,10 @@ public class ViewFrame extends JFrame {
 			}
 		};
 
+		/**
+		 * Iterate segmentation for loaded images
+		 * Show result dialog at the end to compare correctness of segmentation
+		 */
 		ActionListener iterateAction = new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -151,8 +196,8 @@ public class ViewFrame extends JFrame {
 					imageProcessor.initProcessor(img);
 					imageProcessor.processComputation();
 
-					j += imageProcessor.debugInt;
-					str.append(imageProcessor.debugString);
+					j += ImageProcessor.debugInt;
+					str.append(ImageProcessor.debugString);
 					str.append("\n\n\n##########################################################################\n\n");
 				}
 				str.append("\t" + i + " images and " + j + " segments computed");
@@ -167,7 +212,9 @@ public class ViewFrame extends JFrame {
 			}
 		};
 
-
+		/*
+		 * Link listeners
+		 */
 		openButton.addActionListener(openAction);
 		repaintButton.addActionListener(repaintAction);
 		processButton.addActionListener(processAction);
@@ -175,8 +222,9 @@ public class ViewFrame extends JFrame {
 		iterateProcess.addActionListener(iterateAction);
 		calculateMomentsButton.addActionListener(calculateMomentsAction);
 		
-		
-
+		/*
+		 * Add buttons to frame
+		 */
 		Container pane = getContentPane();
 		pane.add(openButton);
 		pane.add(repaintButton);
