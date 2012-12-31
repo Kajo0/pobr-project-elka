@@ -1,127 +1,195 @@
 package pl.edu.pw.elka.mmarkiew.model;
 
-import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
-import java.awt.image.MemoryImageSource;
 import java.awt.image.PixelGrabber;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-
+import java.util.Map.Entry;
 import pl.edu.pw.elka.mmarkiew.view.ImagePainter;
 
+/**
+ * Class responsible for processing of image
+ * 
+ * @author Mikolaj Markiewicz
+ */
 public class ImageProcessor {
 
+	/** Minimum area of segment which is consider as proper segment after segmentation */
+	public static final int MINIMUM_SGEMENT_AREA = 30;
+
+
+	/** Debug string to get data from iteration calc */
 	public static String debugString = "-1";
+
+	/** Debug int to get data from iteration calc */
 	public static int debugInt = -1;
 
+
+	/** Image to process */
 	private BufferedImage image;
+	
+	/** Width of image */
 	private int width;
+	
+	/** Height of image */
 	private int height;
 
+
+	/** Raw pixels read as integer values */
 	private int[] rawPixels;
+	
+	/** Image as pixels */
 	private Pixel[][] pixels;
+	
+	/** Temporary helpful image as pixels */
 	private Pixel[][] tmpPixels;
+	
+	/** Binarized image as pixels */
 	private boolean[][] binPixels;
 	
+	
+	/** List of segmented objects from image */
 	private ArrayList<Segment> segments = new ArrayList<>();
-
+	
+	/**
+	 * C-tor
+	 * 
+	 * @param image Image to process
+	 */
 	public ImageProcessor(final BufferedImage image) {
 		initProcessor(image);
 	}
 
+	/**
+	 * Initialize processor as new one
+	 * 
+	 * @param image Image to process
+	 */
 	public void initProcessor(final BufferedImage image) {
 		this.image = image;
 		this.width = image.getWidth();
 		this.height = image.getHeight();
 
+		/*
+		 * Grab pixels from image
+		 */
 		PixelGrabber grabber = new PixelGrabber((Image) this.image, 0, 0, width, height, false);
 
 		try {
 			if (!grabber.grabPixels())
-				throw new Exception("Unable to grab pixels");
+				throw new Exception("Unable to grab pixels.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		this.rawPixels = (int[]) grabber.getPixels();
 		grabber.abortGrabbing();
-		grabber = null;
+		grabber = null;	// info 4 GC
 
 		this.pixels = new Pixel[width][height];
 		this.tmpPixels = new Pixel[width][height];
 		this.binPixels = new boolean[width][height]; 
 
+		/*
+		 * Copy as pixels
+		 */
 		for (int y = 0; y < height; ++y)
 			for (int x = 0; x < width; ++x)
 				tmpPixels[x][y] = pixels[x][y] = new Pixel(rawPixels[x + y * width]);
 	}
 
+	/**
+	 * Do full object recognition on image by operations on image
+	 */
 	public void process() {
-//		pixels = Utilities.blurPixels(pixels);
-//		pixels = Utilities.binarizePixels(pixels, Integer.parseInt(new JOptionPane().showInputDialog("Podaj threshold")));
-//		pixels = Utilities.binarizePixels(pixels, 172);
-//		pixels = Utilities.rankinkgFilterPixels(pixels, 3);
-//		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
-		
-//		pixels = Utilities.increaseContrastPixels(pixels, 1.5);
-		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
-		pixels = Utilities.binarizePixels(pixels, 142);
-//		pixels = Utilities.rankinkgFilterPixels(pixels, 3, 3);
+//		Integer.parseInt(new JOptionPane().showInputDialog("Input value"))	// TODO remove
 
-		boolean[][] binaryPixels = new boolean[width][height];
+		/*
+		 * Possible image filters
+		 */
+//		pixels = Utilities.blurPixels(pixels);
+//		pixels = Utilities.binarizePixels(pixels, 172);
+//		pixels = Utilities.rankinkgFilterPixels(pixels, 3, 3);
+//		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
+//		pixels = Utilities.increaseContrastPixels(pixels, 1.5);
+
+		/*
+		 * Sharpen image
+		 */
+		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
+		/*
+		 * Binarize image
+		 */
+		pixels = Utilities.binarizePixels(pixels, 142);
+
+
+		/*
+		 * Create binary image as pixels
+		 */
 		for (int x = 0; x < width; ++x)
 			for (int y = 0; y < height; ++y)
-				binaryPixels[x][y] = pixels[x][y].isWhite();
+				binPixels[x][y] = pixels[x][y].isWhite();
 
-		Segmentator segmentator = new Segmentator(binaryPixels);
+		/*
+		 * Do segmentation
+		 */
+		Segmentator segmentator = new Segmentator(binPixels);
 		segmentator.segmentation();
 
-		Segment.pixels = binaryPixels;
+		/*
+		 * Set pixels before computation
+		 */
+		Segment.pixels = binPixels;
 
+		
+		/*
+		 * Select appropriate segments by size, calculate on them sth.
+		 */
 		for (Segment segment : segmentator.getSegments()) {
 				segment.calculateSizes();
 		
-				if (segment.getS() > 30 /*&& segment.getS() > width * height / 4 && segment.getMinX() != 0 && segment.getMinY() != 0*/) {
+				if (segment.getS() > MINIMUM_SGEMENT_AREA) {
 					segment.calculateMoments();
 					segments.add(segment);
 				}
 		}
 
+
+		/*
+		 * Do proper recognition - find logos
+		 */
 		Finder finder = new Finder(segments);
 		finder.find();
+
 		
-		for (AMDSegment amd : finder.getAMDSegments()) {
+		/*
+		 * For each AMD segment mark(bound box) them on picute
+		 */
+		for (AMDSegment amd : finder.getAMDSegments())
 			markAMDs(tmpPixels, amd.getMinX(), amd.getMinY(), amd.getMaxX(), amd.getMaxY());
-		}
 		
-//////		ArrayList<Segment> segments = new ArrayList<>();
-//////		for (Map.Entry<Integer, Segment> it : segmentator.getSegments().entrySet()) {
-//////			Segment segment = it.getValue();
-//////
-//////			segment.calculateSizes();
-//////
-//////			if (segment.getS() > 50 /*&& segment.getS() > width * height / 4 && segment.getMinX() != 0 && segment.getMinY() != 0*/) {
-//////				segment.calculateMoments();
-//////				segments.add(segment);
-//////			}
-//////		}
-
-
-
+		
+		/*
+		 * Show segmented binary image
+		 */
 		image = Utilities.createImageFromPixels(pixels);
-		new ImagePainter(image);
-		new ImagePainter(Utilities.createImageFromPixels(tmpPixels));
+		new ImagePainter(image, "Segmented image");
+
+		/*
+		 * Show final recognized image
+		 */
+		new ImagePainter(Utilities.createImageFromPixels(tmpPixels), "Found AMD logos");
 	}
 
+	/**
+	 * Function to iterate get proper moments range
+	 * At the end, text data about computation is given as static fields of processor
+	 * 
+	 * @note only simple, well formated parts of images are appropriate
+	 */
 	public void processComputation() {
 		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
 		pixels = Utilities.binarizePixels(pixels, 142);
@@ -144,7 +212,7 @@ public class ImageProcessor {
 		for (Segment segment : segmentator.getSegments()) {
 				segment.calculateSizes();
 		
-				if (/*segment.getS() > 30 && */segment.getS() > width * height / 6 && segment.getMinX() != 0 && segment.getMinY() != 0) {
+				if (segment.getS() > width * height / 6 && segment.getMinX() != 0 && segment.getMinY() != 0) {
 					segment.calculateMoments();
 					segments.add(segment);
 					++i;
@@ -158,14 +226,17 @@ public class ImageProcessor {
 		debugInt = i;
 
 		image = Utilities.createImageFromPixels(pixels);
-		new ImagePainter(image);
+		new ImagePainter(image, "Segmented iteraration picture");
 	}
 
+	/**
+	 * Calculate ranges of moments by segmented objects
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void calculateSegmentsMoments() {
 		if (segments.size() == 0)
 			return;
 
-//		M7 -> M3 -> W7 -> W8 -> W9 -> M1
 		HashMap<String, ArrayList<Double>> map = new HashMap<>();
 		map.put("M7", new ArrayList<Double>());
 		map.put("M3", new ArrayList<Double>());
@@ -183,7 +254,7 @@ public class ImageProcessor {
 			map.get("M1").add(segment.getMoment(1));
 		}
 
-		Iterator it = map.entrySet().iterator();
+		Iterator<Entry<String, ArrayList<Double>>> it = map.entrySet().iterator();
 		while (it.hasNext()) {
 			double sum = 0, min = 9999, max = -9999;
 			Map.Entry pair = (Map.Entry) it.next();
@@ -197,7 +268,6 @@ public class ImageProcessor {
 				max = (d > max ? d : max);
 			}
 			
-//			double m7l = 0.011,	m7r = 0.017,	M7 = 0.01529928011767842575;
 			System.out.print("double " + key + " = " + sum / ((ArrayList<Double>) pair.getValue()).size() + ",\t");
 			System.out.print(key.toLowerCase() + "l = " + min + ",\t");
 			System.out.print(key.toLowerCase() + "r = " + max + ";");
@@ -207,6 +277,15 @@ public class ImageProcessor {
 		}
 	}
 
+	/**
+	 * Create bounding box around AMD segment
+	 * 
+	 * @param pixels Image to mark on
+	 * @param x1
+	 * @param y1
+	 * @param x2
+	 * @param y2
+	 */
 	private void markAMDs(Pixel[][] pixels, int x1, int y1, int x2, int y2) {
 		int xp = Math.min(x1, x2);
 		int xk = Math.max(x1, x2);

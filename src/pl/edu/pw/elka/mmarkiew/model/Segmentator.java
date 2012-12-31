@@ -1,24 +1,36 @@
 package pl.edu.pw.elka.mmarkiew.model;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
 
-//////import java.util.HashMap;
-
+/**
+ * Class responsible for image segmentation
+ * 
+ * @author Mikolaj Markiewicz
+ */
 public class Segmentator {
 
+	/** Width of image */
 	private int width;
-	private int height;
-	private boolean[][] binaryPixels;
-	private Point[][] pointsAssignment;
-	private HashMap<Integer, Segment> segments = new HashMap<>();
-//////	private HashMap<Integer, Segment> segments = new HashMap<>();
-//////	private int[][] pixelAssignmentToSegment;
 	
+	/** Height of image */
+	private int height;
+	
+	/** Binary image as array */
+	private boolean[][] binaryPixels;
+
+	/** Array of segments ids to which point is assigned */
+	private Point[][] pointsAssignment;
+
+	/** Map of segments with id as key and segment as value */
+	private HashMap<Integer, Segment> segments = new HashMap<>();
+
+	/**
+	 * C-tor
+	 * 
+	 * @param binaryPixels Binary pixels array to segmentate from
+	 */
 	public Segmentator(final boolean[][] binaryPixels) {
 		this.width = binaryPixels.length;
 		this.height = binaryPixels[0].length;
@@ -26,201 +38,180 @@ public class Segmentator {
 		this.binaryPixels = binaryPixels;
 		this.pointsAssignment = new Point[width][height];
 
+		/*
+		 * Set them all not assigned
+		 */
 		for (int x = 0; x < width; ++x)
 			for (int y = 0; y < height; ++y)
 				pointsAssignment[x][y] = new Point(x, y, -1);
-//////		this.pixelAssignmentToSegment = new int[this.width][this.height];
 	}
-	
+
+	/**
+	 * Get list of segments found
+	 * 
+	 * @return List of segments
+	 */
 	public ArrayList<Segment> getSegments() {
 		return new ArrayList<Segment>(this.segments.values());
 	}
 
+	/**
+	 * Do proper segmentation
+	 */
 	public void segmentation() {
+		/** Segment id generator */
 		int segmentId = 0;
-		ArrayList<Integer> removeSegmentsAfter = new ArrayList<>();
 
+		/*
+		 * Go through image
+		 */
 		for (int y = 0; y < height; ++y)
 			for (int x = 0; x < width; ++x) {
-//				if (binaryPixels[x][y]) {
-					Point c = new Point(x, y, -1);
+//				if (binaryPixels[x][y]) { // TODO uncomment that condition if only 'white' are considered
+					/*
+					 * Create unassigned point
+					 */
+					Point tmpPoint = new Point(x, y, -1);
 
+					/*
+					 * If first line, specific conditions
+					 */
 					if (y == 0) {
+						/*
+						 * If first pixel or different value as left one
+						 * generate new segment and add considered point to it
+						 */
 						if (x == 0 || binaryPixels[x][y] != binaryPixels[x - 1][y]) {
 							Segment s = new Segment(segmentId++, width, height);
-							c.segmentId = segmentId - 1;
-							s.addPoint(c);
+							tmpPoint.segmentId = segmentId - 1;
+							s.addPoint(tmpPoint);
 							segments.put(segmentId - 1, s);
 							pointsAssignment[x][y].segmentId = segmentId - 1;
-						} else {
-							c.segmentId = pointsAssignment[x - 1][y].segmentId;
-							segments.get(c.segmentId).addPoint(c);
-							pointsAssignment[x][y].segmentId = c.segmentId;
 						}
-					} else {
+						/*
+						 * Else add considered point to segment to which left point is assigned
+						 */
+						else {
+							tmpPoint.segmentId = pointsAssignment[x - 1][y].segmentId;
+							segments.get(tmpPoint.segmentId).addPoint(tmpPoint);
+							pointsAssignment[x][y].segmentId = tmpPoint.segmentId;
+						}
+					}
+					/*
+					 * Else if it's not first line
+					 */
+					else {
+						/*
+						 * If it's first column consider only with top pixels
+						 */
 						if (x == 0) {
+							/*
+							 * If different value as top one
+							 * generate new segment
+							 */
 							if (binaryPixels[x][y] != binaryPixels[x][y - 1]) {
 								Segment s = new Segment(segmentId++, width, height);
-								c.segmentId = segmentId - 1;
-								s.addPoint(c);
+								tmpPoint.segmentId = segmentId - 1;
+								s.addPoint(tmpPoint);
 								segments.put(segmentId - 1, s);
 								pointsAssignment[x][y].segmentId = segmentId - 1;
-							} else {
-								c.segmentId = pointsAssignment[x][y - 1].segmentId;
-								segments.get(c.segmentId).addPoint(c);
-								pointsAssignment[x][y].segmentId = c.segmentId;
 							}
-						} else {
+							/*
+							 * Else add point to 'top segment'
+							 */
+							else {
+								tmpPoint.segmentId = pointsAssignment[x][y - 1].segmentId;
+								segments.get(tmpPoint.segmentId).addPoint(tmpPoint);
+								pointsAssignment[x][y].segmentId = tmpPoint.segmentId;
+							}
+						}
+						/*
+						 * Else if it's not first pixel in the row do more..
+						 */
+						else {
+							/*
+							 * If considered pixel value is same as left
+							 * consider also top one
+							 */
 							if (binaryPixels[x][y] == binaryPixels[x - 1][y]) {
-								c.segmentId = pointsAssignment[x - 1][y].segmentId;
-								pointsAssignment[x][y].segmentId = c.segmentId;
+								/*
+								 * First set as left one
+								 */
+								tmpPoint.segmentId = pointsAssignment[x - 1][y].segmentId;
+								pointsAssignment[x][y].segmentId = tmpPoint.segmentId;
 								
-								// Check top
+								/*
+								 * Next check top
+								 * If same value as top one and left one and top one id's aren't the same
+								 * put points from segment with higer id into segment with lower id - less moving
+								 */
 								if (binaryPixels[x][y] == binaryPixels[x][y - 1] &&
 											pointsAssignment[x][y].segmentId != pointsAssignment[x][y - 1].segmentId) {
-									
-									int upVal = pointsAssignment[x][y - 1].segmentId;
-									int leftVal = pointsAssignment[x - 1][y].segmentId;
-									int addToThisId = Math.min(upVal, leftVal);
-		                            int removeThisId = Math.max(upVal, leftVal);
+									/*
+									 * Get lower id to less moving things
+									 */
+									int segmentIdToAddToIt = Math.min(pointsAssignment[x][y - 1].segmentId, pointsAssignment[x - 1][y].segmentId);
+		                            int segmentIdToRemove = Math.max(pointsAssignment[x][y - 1].segmentId, pointsAssignment[x - 1][y].segmentId);
 
-									c.segmentId = addToThisId;
-									pointsAssignment[x][y].segmentId = c.segmentId;
-									Segment addItemsTo = segments.get(addToThisId);
-									addItemsTo.addPoint(c);
+									tmpPoint.segmentId = segmentIdToAddToIt;
+									pointsAssignment[x][y].segmentId = tmpPoint.segmentId;
+									Segment addItemsTo = segments.get(segmentIdToAddToIt);
+									addItemsTo.addPoint(tmpPoint);
 
-									Segment toBeRemoved = segments.get(removeThisId);
+									/*
+									 * Go through points from higher segment and move them into another
+									 */
+									Segment toBeRemoved = segments.get(segmentIdToRemove);
 									LinkedList<Point> pointses = toBeRemoved.getPoints();
 									for (int i = 0; i < pointses.size(); ++i) {
 										Point ic = pointses.get(i);
-										ic.segmentId = addToThisId;
-										pointsAssignment[ic.x][ic.y].segmentId = addToThisId;
+										ic.segmentId = segmentIdToAddToIt;
+										pointsAssignment[ic.x][ic.y].segmentId = segmentIdToAddToIt;
 										addItemsTo.addPoint(ic);
 									}
 									
-									segments.remove(removeThisId);
-									
-								} else {
-									segments.get(c.segmentId).addPoint(c);
+									/*
+									 * Remove unused segment
+									 */
+									segments.remove(segmentIdToRemove);
 								}
-							} else {
+								/*
+								 * Else add point to 'left segment'
+								 */
+								else {
+									segments.get(tmpPoint.segmentId).addPoint(tmpPoint);
+								}
+							}
+							/*
+							 * Else if different, consider only with top
+							 */
+							else {
+								/*
+								 * If same as top, add to top one segment
+								 */
 								if (binaryPixels[x][y] == binaryPixels[x][y - 1]) {
-									c.segmentId = pointsAssignment[x][y - 1].segmentId;
-									segments.get(c.segmentId).addPoint(c);
-									pointsAssignment[x][y].segmentId = c.segmentId;
-								} else {
+									tmpPoint.segmentId = pointsAssignment[x][y - 1].segmentId;
+									segments.get(tmpPoint.segmentId).addPoint(tmpPoint);
+									pointsAssignment[x][y].segmentId = tmpPoint.segmentId;
+								}
+								/*
+								 * Else create new one segment
+								 */
+								else {
 									Segment s = new Segment(segmentId++, width, height);
-									c.segmentId = segmentId - 1;
-									s.addPoint(c);
+									tmpPoint.segmentId = segmentId - 1;
+									s.addPoint(tmpPoint);
 									segments.put(segmentId - 1, s);
 									pointsAssignment[x][y].segmentId = segmentId - 1;
 								}
 							}
 						}
 //					}
-//					if (x > 0 && pointsAssignment[x - 1][y].segmentId >= 0) {
-//						if (y > 0
-//								&& pointsAssignment[x][y - 1].segmentId >= 0
-//								&& pointsAssignment[x][y - 1].segmentId != pointsAssignment[x - 1][y].segmentId) {
-//
-//							int upVal = pointsAssignment[x][y - 1].segmentId;
-//							int leftVal = pointsAssignment[x - 1][y].segmentId;
-//							int addToThisId = Math.min(upVal, leftVal);
-//							int removeThisId = Math.max(upVal, leftVal);
-//							
-//							c.segmentId = addToThisId;
-//							Segment addItemsTo = segments.get(addToThisId);
-//							addItemsTo.addPoint(c);
-//
-//							Segment toBeRemoved = segments.get(removeThisId);
-//							for (int i = 0; i < toBeRemoved.getPoints().size(); ++i) {
-//								Point ic = toBeRemoved.getPoints().get(i);
-//								ic.segmentId = c.segmentId;
-//								pointsAssignment[ic.x][ic.y].segmentId = c.segmentId;
-//								addItemsTo.addPoint(ic);
-//							}
-//							
-//							removeSegmentsAfter.add(removeThisId);
-//						} else {
-//							c.segmentId = pointsAssignment[x - 1][y].segmentId;
-//							segments.get(c.segmentId).addPoint(c);
-//						}
-//					} else if (y > 0
-//							&& pointsAssignment[x][y - 1].segmentId >= 0) {
-//						c.segmentId = pointsAssignment[x][y - 1].segmentId;
-//						segments.get(c.segmentId).addPoint(c);
-//					} else {
-//						Segment s = new Segment(segmentId++, width, height);
-//						c.segmentId = segmentId - 1;
-//						s.addPoint(c);
-//						segments.add(segmentId - 1, s);
-//					}
 
-					pointsAssignment[x][y] = c;
+					pointsAssignment[x][y] = tmpPoint;
 				}
 			}
 
-//		Collections.sort(removeSegmentsAfter);
-//		Collections.reverse(removeSegmentsAfter);
-//		for (int i = 0; i < removeSegmentsAfter.size(); ++i)
-////			if (removeSegmentsAfter.get(i) < segments.size())
-//				segments.remove((int) removeSegmentsAfter.get(i));
-//////		pixelAssignmentToSegment[0][0] = segmentId++;
-//////
-//////		for (int y = 0; y < height; ++y)
-//////			for (int x = 1; x < width; ++x) {
-//////
-//////				if (y == 0) {
-//////					if (binaryPixels[x][y] != binaryPixels[x - 1][y])
-//////						pixelAssignmentToSegment[x][y] = segmentId++;
-//////					else
-//////						pixelAssignmentToSegment[x][y] = pixelAssignmentToSegment[x - 1][y];
-//////				} else {
-//////					if (x == 0) {
-//////						if (binaryPixels[x][y] != binaryPixels[x][y - 1])
-//////							pixelAssignmentToSegment[x][y] = segmentId++;
-//////						else
-//////							pixelAssignmentToSegment[x][y] = pixelAssignmentToSegment[x][y - 1];
-//////					} else {
-//////						if (binaryPixels[x][y] == binaryPixels[x - 1][y]) {
-//////							pixelAssignmentToSegment[x][y] = pixelAssignmentToSegment[x - 1][y];
-//////							
-//////							// Check top
-//////							if (binaryPixels[x][y] == binaryPixels[x][y - 1] &&
-//////												pixelAssignmentToSegment[x][y] != pixelAssignmentToSegment[x][y - 1])
-//////								replaceAssignment(pixelAssignmentToSegment[x][y], pixelAssignmentToSegment[x][y - 1],
-//////																												x, y);
-//////						} else {
-//////							if (binaryPixels[x][y] == binaryPixels[x][y - 1])
-//////								pixelAssignmentToSegment[x][y] = pixelAssignmentToSegment[x][y - 1];
-//////							else
-//////								pixelAssignmentToSegment[x][y] = segmentId++;
-//////						}
-//////					}
-//////				}
-//////			}
-//////
-//////		for (int y = 0; y < pixelAssignmentToSegment[0].length; ++y) {
-//////			for (int x = 0; x < pixelAssignmentToSegment.length; ++x) {
-//////				int id = pixelAssignmentToSegment[x][y];
-//////
-//////				if (segments.get(id) == null)
-//////					segments.put(id, new Segment(id, width, height));
-//////				
-//////				segments.get(id).lightPixel(x, y);
-//////			}
-//////		}
 	}
-	
-//////	public void replaceAssignment(final int from, final int to, final int xEnd, final int yEnd) {
-//////		for (int y = 0; y < yEnd + 1; ++y)
-//////			for (int x = 0; x < xEnd + 1; ++x)
-//////				if (pixelAssignmentToSegment[x][y] == from)
-//////					pixelAssignmentToSegment[x][y] = to;
-//////	}
-//////
-//////	public HashMap<Integer, Segment> getSegments() {
-//////		return this.segments;
-//////	}
 	
 }

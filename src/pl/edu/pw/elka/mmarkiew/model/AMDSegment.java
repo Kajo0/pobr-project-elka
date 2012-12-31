@@ -2,24 +2,52 @@ package pl.edu.pw.elka.mmarkiew.model;
 
 import java.util.LinkedList;
 
+/**
+ * Gather segments made AMD logos
+ * 
+ * @author Mikolaj Markiewicz
+ */
 public class AMDSegment {
 
+	/** List of segments */
 	private LinkedList<Segment> segments = new LinkedList<>();
 
-	public AMDSegment(Segment a, Segment m, Segment d) {
+	/**
+	 * C-tor
+	 * 
+	 * @param a A segment
+	 * @param m M segment
+	 * @param d D segment
+	 */
+	public AMDSegment(final Segment a, final Segment m, final Segment d) {
 		segments.add(a);
 		segments.add(m);
 		segments.add(d);
 	}
 	
-	public void addSegment(Segment segment) {
+	/**
+	 * Add segment to list
+	 * 
+	 * @param segment Segment to add
+	 */
+	public void addSegment(final Segment segment) {
 		this.segments.add(segment);
 	}
 
+	/**
+	 * Get segments making logo
+	 * 
+	 * @return List of segments
+	 */
 	public LinkedList<Segment> getSegments() {
 		return this.segments;
 	}
 
+	/**
+	 * Get minimum x coordinate of logo bounding box
+	 * 
+	 * @return Minimum x coordinate
+	 */
 	public int getMinX() {
 		int tmp = 999999;
 		
@@ -28,7 +56,12 @@ public class AMDSegment {
 		
 		return tmp;
 	}
-	
+
+	/**
+	 * Get minimum y coordinate of logo bounding box
+	 * 
+	 * @return Minimum y coordinate
+	 */
 	public int getMinY() {
 		int tmp = 999999;
 		
@@ -38,6 +71,11 @@ public class AMDSegment {
 		return tmp;
 	}
 
+	/**
+	 * Get maximum x coordinate of logo bounding box
+	 * 
+	 * @return Maximum x coordinate
+	 */
 	public int getMaxX() {
 		int tmp = 0;
 		
@@ -46,7 +84,12 @@ public class AMDSegment {
 		
 		return tmp;
 	}
-	
+
+	/**
+	 * Get maximum y coordinate of logo bounding box
+	 * 
+	 * @return Maximum x coordinate
+	 */
 	public int getMaxY() {
 		int tmp = 0;
 		
