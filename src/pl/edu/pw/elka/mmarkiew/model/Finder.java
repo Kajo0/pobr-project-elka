@@ -50,9 +50,13 @@ public class Finder {
 		
 		for (Segment segment : possibleSegments)
 			for (Point point : segment.getPoints()) {
-				pixels[point.x][point.y].r = (segment.type == SegmentType.LETTER_A ? 255 : 0);
-				pixels[point.x][point.y].g = (segment.type == SegmentType.LETTER_M ? 255 : 0);
-				pixels[point.x][point.y].b = (segment.type == SegmentType.LETTER_D ? 255 : 0);
+				pixels[point.x][point.y].r = (segment.type == SegmentType.LETTER_A ||
+												segment.type == SegmentType.BOTTOM_LEFT_BOXY ? 255 : 0);
+				pixels[point.x][point.y].g = (segment.type == SegmentType.LETTER_M ||
+												segment.type == SegmentType.BOTTOM_LEFT_BOXY ||
+												segment.type == SegmentType.TOP_RIGHT_BOXY ? 255 : 0);
+				pixels[point.x][point.y].b = (segment.type == SegmentType.LETTER_D ||
+												segment.type == SegmentType.TOP_RIGHT_BOXY ? 255 : 0);
 			}
 		
 		new ImagePainter(Utilities.createImageFromPixels(pixels), "Marked segments");
@@ -70,34 +74,55 @@ public class Finder {
 		double aProbability = checkIfA(segment);
 		double mProbability = checkIfM(segment);
 		double dProbability = checkIfD(segment);
+		double blbProbability = checkIfBottomLeftBoxy(segment);
+		double trbProbability = checkIfTopRightBoxy(segment);
 
 		/*
 		 * If found probability as any segment add to possible
 		 */
-		if (aProbability > 0 || mProbability > 0 || dProbability > 0) {
+		if (aProbability > 0 || mProbability > 0 || dProbability > 0 || blbProbability > 0 || trbProbability > 0) {
 			aProbability = (aProbability == 0 ? 9999 : aProbability);
 			mProbability = (mProbability == 0 ? 9999 : mProbability);
 			dProbability = (dProbability == 0 ? 9999 : dProbability);
+			blbProbability = (blbProbability == 0 ? 9999 : blbProbability);
+			trbProbability = (trbProbability == 0 ? 9999 : trbProbability);
 
 			possibleSegments.add(segment);
+			
+			double minimum = Math.min(aProbability, Math.min(mProbability, Math.min(dProbability,
+																		Math.min(blbProbability, trbProbability))));
+
+			if (minimum == aProbability) {
+				segment.type = SegmentType.LETTER_A;
+			} else if (minimum == mProbability) {
+				segment.type = SegmentType.LETTER_M;
+			} else if (minimum == dProbability) {
+				segment.type = SegmentType.LETTER_D;
+			} else if (minimum == blbProbability) {
+				segment.type = SegmentType.BOTTOM_LEFT_BOXY;
+			} else {// if (minimum == trbProbability) {
+				segment.type = SegmentType.TOP_RIGHT_BOXY;
+			}
+
+			segment.typeProbability = minimum;
 
 			/*
 			 * Less probability, means better adaptation to segment
 			 * Mark segments what they are => set its type
 			 */
-			if (aProbability < mProbability) {
-				if (aProbability < dProbability)
-					segment.type = SegmentType.LETTER_A;
-				else if (mProbability < dProbability)
-					segment.type = SegmentType.LETTER_M;
-				else
-					segment.type = SegmentType.LETTER_D;
-			} else if (mProbability < dProbability)
-				segment.type = SegmentType.LETTER_M;
-			else
-				segment.type = SegmentType.LETTER_D;
-			
-			segment.typeProbability = Math.min(aProbability, Math.min(mProbability, dProbability));
+//			if (aProbability < mProbability) {
+//				if (aProbability < dProbability)
+//					segment.type = SegmentType.LETTER_A;
+//				else if (mProbability < dProbability)
+//					segment.type = SegmentType.LETTER_M;
+//				else
+//					segment.type = SegmentType.LETTER_D;
+//			} else if (mProbability < dProbability)
+//				segment.type = SegmentType.LETTER_M;
+//			else
+//				segment.type = SegmentType.LETTER_D;
+//			
+//			segment.typeProbability = Math.min(aProbability, Math.min(mProbability, dProbability));
 		}
 	}
 
@@ -413,6 +438,144 @@ public class Finder {
 					}
 			}
 		}
+	}
+	/**
+	 * Check probability of assigning to BOTTOM_LEFT_BOXY letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
+	private double checkIfBottomLeftBoxy(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
+		double M7 = 0.01006087606634447,	m7l = 0.00893095564700503,	m7r = 0.010612771903258118;
+		double W8 = 0.27841615088534183,	w8l = 0.22748815165876776,	w8r = 0.3584905660377358;
+		double W7 = 0.09584026292864498,	w7l = 0.0,	w7r = 0.2;
+		double W9 = 0.6191299122404113,	w9l = 0.5570199036889057,	w9r = 0.6812722500195435;
+		double M3 = 0.0032730671570117787,	m3l = 0.0021232435303287973,	m3r = 0.007387269873406151;
+		double M1 = 0.2277520247833174,	m1l = 0.20527777777777778,	m1r = 0.3011525620554507;
+
+		/*
+		 * Left, right expand
+		 */
+		double lr = 0.9, rl = 1.1;
+		
+		m7l *= lr;
+		m7r *= rl;
+		w8l *= lr;
+		w8r *= rl;
+		w7l *= lr;
+		w7r *= rl;
+		w9l *= lr;
+		w9r *= rl;
+		m3l *= lr;
+		m3r *= rl;
+		m1l *= lr;
+		m1r *= rl;
+
+		double prob = 0;
+
+		/*
+		 * Check if match in range
+		 */
+		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
+			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+
+			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
+				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
+				
+				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
+					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
+
+					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
+						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
+
+						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
+							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
+
+							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
+								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
+								
+								return prob;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Check probability of assigning to TOP_RIGHT_BOXY letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
+	private double checkIfTopRightBoxy(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
+		double M7 = 0.016750583364079735,	m7l = 0.01460895109865161,	m7r = 0.01862475224489796;
+		double W8 = 0.28129323266771716,	w8l = 0.24170616113744076,	w8r = 0.3440366972477064;
+		double W7 = 0.034393487345838504,	w7l = 0.0,	w7r = 0.0625;
+		double W9 = 0.5355766842288621,	w9l = 0.43022679814997716,	w9r = 0.61744742344133;
+		double M3 = 0.030138853380037044,	m3l = 0.017385017354562094,	m3r = 0.08499255340048821;
+		double M1 = 0.3512951154473476,	m1l = 0.2863000524692911,	m1r = 0.5873122448979592;
+
+
+		/*
+		 * Left, right expand
+		 */
+		double lr = 0.9, rl = 1.1;
+		
+		m7l *= lr;
+		m7r *= rl;
+		w8l *= lr;
+		w8r *= rl;
+		w7l *= lr;
+		w7r *= rl;
+		w9l *= lr;
+		w9r *= rl;
+		m3l *= lr;
+		m3r *= rl;
+		m1l *= lr;
+		m1r *= rl;
+
+		double prob = 0;
+
+		/*
+		 * Check if match in range
+		 */
+		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
+			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+
+			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
+				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
+				
+				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
+					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
+
+					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
+						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
+
+						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
+							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
+
+							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
+								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
+								
+								return prob;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return 0;
 	}
 
 	/**
