@@ -44,11 +44,17 @@ public class ImageProcessor {
 	/** Image as pixels */
 	private Pixel[][] pixels;
 	
+	/** Image as inverted pixels */
+	private Pixel[][] invPixels;
+	
 	/** Temporary helpful image as pixels */
 	private Pixel[][] tmpPixels;
 	
 	/** Binarized image as pixels */
 	private boolean[][] binPixels;
+
+	/** Binarized inverted image as pixels */
+	private boolean[][] binInvPixels;
 	
 	
 	/** List of segmented objects from image */
@@ -90,40 +96,98 @@ public class ImageProcessor {
 		grabber = null;	// info 4 GC
 
 		this.pixels = new Pixel[width][height];
+		this.invPixels = new Pixel[width][height];
 		this.tmpPixels = new Pixel[width][height];
-		this.binPixels = new boolean[width][height]; 
+		this.binPixels = new boolean[width][height];
+		this.binInvPixels = new boolean[width][height];
 
 		/*
 		 * Copy as pixels
 		 */
 		for (int y = 0; y < height; ++y)
 			for (int x = 0; x < width; ++x)
-				tmpPixels[x][y] = pixels[x][y] = new Pixel(rawPixels[x + y * width]);
+				tmpPixels[x][y] = invPixels[x][y] = pixels[x][y] = new Pixel(rawPixels[x + y * width]);
 	}
 
 	/**
 	 * Do full object recognition on image by operations on image
 	 */
-	public void process() {
+	public void process(boolean checkAlsoIvert) {
 //		Integer.parseInt(new JOptionPane().showInputDialog("Input value"))	// TODO remove
 
 		/*
 		 * Possible image filters
 		 */
 //		pixels = Utilities.blurPixels(pixels);
-//		pixels = Utilities.binarizePixels(pixels, 172);
+//		pixels = Utilities.binarizePixels(pixels, 142);
 //		pixels = Utilities.rankinkgFilterPixels(pixels, 3, 3);
 //		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
 //		pixels = Utilities.increaseContrastPixels(pixels, 1.5);
 
 		/*
+		 * If check also on invert image
+		 */
+		if (checkAlsoIvert) {
+			invPixels = Utilities.invertPixels(pixels);
+			invPixels = processPixels(invPixels, binInvPixels);
+		}
+
+		/*
+		 * Do process
+		 */
+		pixels = processPixels(pixels, binPixels);
+
+
+		/*
+		 * Do proper recognition - find logos
+		 */
+		Finder finder = new Finder(segments);
+		finder.find();
+
+		
+		/*
+		 * For each AMD segment mark(bound box) them on picute
+		 */
+		for (AMDSegment amd : finder.getAMDSegments())
+			markAMDs(tmpPixels, amd.getMinX(), amd.getMinY(), amd.getMaxX(), amd.getMaxY());
+		
+		
+		/*
+		 * Show segmented binary image
+		 */
+		image = Utilities.createImageFromPixels(pixels);
+		new ImagePainter(image, "Segmented image");
+		
+		// If also invert show it
+		if (checkAlsoIvert)
+			new ImagePainter(Utilities.createImageFromPixels(invPixels), "Segmented inverted image");
+
+		/*
+		 * Show final recognized image
+		 */
+		new ImagePainter(Utilities.createImageFromPixels(tmpPixels), "Found AMD logos");
+	}
+
+	/**
+	 * Do segmentation on image as pixels
+	 * Add found appropriate segments into segments list
+	 * 
+	 * @param pixels Image as pixel
+	 * @param binPixels Binary image as array
+	 * @return Binary image as pixels
+	 */
+	private Pixel[][] processPixels(final Pixel[][] pixels, boolean[][] binPixels) {
+		Pixel[][] pixis = null;
+
+		/*
 		 * Sharpen image
 		 */
-		pixels = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
+		pixis = Utilities.unsharpPixels(pixels, 0.7f, 2, 2);
+
 		/*
 		 * Binarize image
 		 */
-		pixels = Utilities.binarizePixels(pixels, 142);
+		pixis = Utilities.binarizePixels(pixis, 142);
 
 
 		/*
@@ -131,7 +195,7 @@ public class ImageProcessor {
 		 */
 		for (int x = 0; x < width; ++x)
 			for (int y = 0; y < height; ++y)
-				binPixels[x][y] = pixels[x][y].isWhite();
+				binPixels[x][y] = pixis[x][y].isWhite();
 
 		/*
 		 * Do segmentation
@@ -157,31 +221,8 @@ public class ImageProcessor {
 				}
 		}
 
-
-		/*
-		 * Do proper recognition - find logos
-		 */
-		Finder finder = new Finder(segments);
-		finder.find();
-
 		
-		/*
-		 * For each AMD segment mark(bound box) them on picute
-		 */
-		for (AMDSegment amd : finder.getAMDSegments())
-			markAMDs(tmpPixels, amd.getMinX(), amd.getMinY(), amd.getMaxX(), amd.getMaxY());
-		
-		
-		/*
-		 * Show segmented binary image
-		 */
-		image = Utilities.createImageFromPixels(pixels);
-		new ImagePainter(image, "Segmented image");
-
-		/*
-		 * Show final recognized image
-		 */
-		new ImagePainter(Utilities.createImageFromPixels(tmpPixels), "Found AMD logos");
+		return pixis;
 	}
 
 	/**

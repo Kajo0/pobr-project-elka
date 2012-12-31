@@ -16,6 +16,23 @@ import java.util.Collections;
 public class Utilities {
 
 	/**
+	 * Invert image colors
+	 * 
+	 * @param pixels Image as pixels
+	 * @return Inverted image as pixels
+	 */
+	public static Pixel[][] invertPixels(final Pixel[][] pixels) {
+		Pixel[][] result = new Pixel[pixels.length][pixels[0].length];
+		for (int x = 0; x < pixels.length; ++x)
+			for (int y = 0; y < pixels[0].length; ++y)
+				result[x][y] = new Pixel(Math.abs(pixels[x][y].r - 255), Math.abs(pixels[x][y].g - 255),
+																					Math.abs(pixels[x][y].b - 255));
+
+		return result;
+	}
+
+
+	/**
 	 * Increase image contrast by stretching histogram and next increasing contrast of 'stretched' image
 	 * 
 	 * @param pixels Image as pixels
@@ -420,7 +437,7 @@ public class Utilities {
 
 				if (r > threshold && g > threshold && b > threshold)
 					tmp[x][y] = new Pixel(255, 255, 255);
-				else if ((hsv[0] > 85 && hsv[0] < 195 || hsv[0] > 290) && hsv[2] > 50) // Green or inverse fox boxy
+				else if ((hsv[0] > 85 && hsv[0] < 195/* || hsv[0] > 290*/) && hsv[2] > 50) // Green or inverse fox boxy
 					tmp[x][y] = new Pixel(255, 255, 255);
 				else
 					tmp[x][y] = new Pixel(0, 0, 0);
