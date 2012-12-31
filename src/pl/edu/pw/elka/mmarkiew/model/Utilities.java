@@ -420,10 +420,8 @@ public class Utilities {
 
 				if (r > threshold && g > threshold && b > threshold)
 					tmp[x][y] = new Pixel(255, 255, 255);
-//				else if (g > 130 && b > 130) // Green boxik
-//					tmp[x][y] = new Pixel(255, 255, 255);
-//				else if ((hsv[0] < 20 || hsv[0] > 330) && hsv[2] > 34) // TODO spr?
-//					tmp[x][y] = new Pixel(255, 255, 255);
+				else if ((hsv[0] > 85 && hsv[0] < 195 || hsv[0] > 290) && hsv[2] > 50) // Green or inverse fox boxy
+					tmp[x][y] = new Pixel(255, 255, 255);
 				else
 					tmp[x][y] = new Pixel(0, 0, 0);
 			}
