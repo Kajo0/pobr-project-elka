@@ -38,6 +38,7 @@ public class Utilities {
 	 * @param pixels Image as pixels
 	 * @param a Amount of increasing
 	 * @return Increased contrast image as pixels
+	 * @deprecated useless
 	 */
 	public static Pixel[][] increaseContrastPixels(final Pixel[][] pixels, final double a) {
 		/*
@@ -337,6 +338,7 @@ public class Utilities {
 	 * @param maskSize Odd size of mask
 	 * @param value Value to get from ranking array
 	 * @return 'Ranked' image as pixels
+	 * @deprecated useless
 	 */
 	public static Pixel[][] rankinkgFilterPixels(final Pixel[][] pixels, final int maskSize, final int value) {
 		if (maskSize % 2 == 0)
@@ -452,6 +454,7 @@ public class Utilities {
 	 * 
 	 * @param pixels Image as pixels
 	 * @return Blurred image as pixels
+	 * @deprecated useless
 	 */
 	public static Pixel[][] blurPixels(final Pixel[][] pixels) {
 		int[][] blurMask = { { 1, 2, 1 }, { 2, 4, 2 }, { 1, 2, 1 } };
