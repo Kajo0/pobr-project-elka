@@ -16,7 +16,7 @@ public class Finder {
 	
 	/** List of segments which possible made logo */
 	private ArrayList<Segment> possibleSegments = new ArrayList<>();
-	
+
 	/** List of found AMD segments */
 	private ArrayList<AMDSegment> amdSegments = new ArrayList<>();
 
@@ -37,8 +37,21 @@ public class Finder {
 		for (Segment segment : segments)
 			findIfPossibleSegments(segment);
 
-		// Find whole logo from possible segments
-		findAMD();
+
+		/*
+		 * Find each AMD from possible segments
+		 */
+		ArrayList<AMDSegment> amds = findAMDs();
+		/*
+		 * Find each Boxes from possible segments
+		 */
+		ArrayList<AMDSegment> boxes = findBoxes();
+		
+		/*
+		 * Find whole logo
+		 */
+		findLogos(amds, boxes);
+
 
 		/*
 		 * Mark found logos and show them in new window
@@ -334,10 +347,154 @@ public class Finder {
 	}
 
 	/**
-	 * Check corresponding sizes, distances and directions to find logos
-	 * Add found logos into amdSemgnets list
+	 * Check probability of assigning to BOTTOM_LEFT_BOXY letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
 	 */
-	private void findAMD() {
+	private double checkIfBottomLeftBoxy(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
+		double M7 = 0.010171061900097774,	m7l = 0.00893095564700503,		m7r = 0.0108390625;
+		double W8 = 0.2809431836682632,		w8l = 0.22748815165876776,		w8r = 0.3584905660377358;
+		double W7 = 0.07454242672227943,	w7l = 0.0,						w7r = 0.2;
+		double W9 = 0.6557798652309388,		w9l = 0.5570199036889057,		w9r = 0.7950071646510283;
+		double M3 = 0.003418273614065021,	m3l = 0.0021232435303287973,	m3r = 0.007387269873406151;
+		double M1 = 0.22406015806868554,	m1l = 0.2041522491349481,		m1r = 0.3011525620554507;
+
+		/*
+		 * Left, right expand
+		 */
+		double lr = 0.9, rl = 1.1;
+		
+		m7l *= lr;
+		m7r *= rl;
+		w8l *= lr;
+		w8r *= rl;
+		w7l *= lr;
+		w7r *= rl;
+		w9l *= lr;
+		w9r *= rl;
+		m3l *= lr;
+		m3r *= rl;
+		m1l *= lr;
+		m1r *= rl;
+
+		double prob = 0;
+
+		/*
+		 * Check if match in range
+		 */
+		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
+			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+
+			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
+				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
+				
+				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
+					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
+
+					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
+						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
+
+						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
+							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
+
+							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
+								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
+								
+								return prob;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Check probability of assigning to TOP_RIGHT_BOXY letter
+	 * 
+	 * @param segment Segment to check
+	 * @return Probability of match or 0 if doesn't match at all
+	 */
+	private double checkIfTopRightBoxy(Segment segment) {
+		/*
+		 * Computed ranges
+		 */
+		double M7 = 0.016686886401055704,	m7l = 0.01460895109865161,	m7r = 0.01862475224489796;
+		double W8 = 0.277763359859657,		w8l = 0.24170616113744076,	w8r = 0.3440366972477064;
+		double W7 = 0.05175049015787439,	w7l = 0.0,					w7r = 0.125;
+		double W9 = 0.5512459640693024,		w9l = 0.43022679814997716,	w9r = 0.6252629466446336;
+		double M3 = 0.028022209694120566,	m3l = 0.017385017354562094,	m3r = 0.08499255340048821;
+		double M1 = 0.34675505028278447,	m1l = 0.2863000524692911,	m1r = 0.5873122448979592;
+
+		/*
+		 * Left, right expand
+		 */
+		double lr = 0.999, rl = 1.1;
+		
+		m7l *= lr;
+		m7r *= rl;
+		w8l *= lr;
+		w8r *= rl;
+		w7l *= lr;
+		w7r *= rl;
+		w9l *= lr;
+		w9r *= rl;
+		m3l *= lr;
+		m3r *= rl;
+		m1l *= lr;
+		m1r *= rl;
+
+		double prob = 0;
+
+		/*
+		 * Check if match in range
+		 */
+		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
+			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+
+			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
+				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
+				
+				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
+					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
+
+					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
+						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
+
+						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
+							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
+
+							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
+								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
+								
+								return prob;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Check corresponding sizes, distances and directions to find AMDs
+	 * 
+	 * @return List of AMD combination segments
+	 */
+	private ArrayList<AMDSegment> findAMDs() {
+		/*
+		 * Array for AMD combination
+		 */
+		ArrayList<AMDSegment> amds = new ArrayList<>();
+		
 		/*
 		 * List of each segments type
 		 */
@@ -403,19 +560,19 @@ public class Finder {
 								/*
 								 * And if there are in similar size
 								 */
-								if (Math.max(aMaxSize, mMaxSize) / Math.min(aMaxSize, mMaxSize) < 4 &&
-										Math.max(mMaxSize, dMaxSize) / Math.min(mMaxSize, dMaxSize) < 4 &&
-										Math.max(aMaxSize, dMaxSize) / Math.min(aMaxSize, dMaxSize) < 4) {
+								if (Math.max(aMaxSize, mMaxSize) / Math.min(aMaxSize, mMaxSize) < 3 &&
+										Math.max(mMaxSize, dMaxSize) / Math.min(mMaxSize, dMaxSize) < 3 &&
+										Math.max(aMaxSize, dMaxSize) / Math.min(aMaxSize, dMaxSize) < 3) {
 
 									/*
 									 * Calc direction
 									 */
 									double amAngle = Math.abs(Math.atan2(aSeg.yWeightCenter() - mSeg.yWeightCenter(),
-																			aSeg.xWeightCenter() - mSeg.xWeightCenter()));
+																		aSeg.xWeightCenter() - mSeg.xWeightCenter()));
 									double mdAngle = Math.abs(Math.atan2(mSeg.yWeightCenter() - dSeg.yWeightCenter(),
-																			mSeg.xWeightCenter() - dSeg.xWeightCenter()));
+																		mSeg.xWeightCenter() - dSeg.xWeightCenter()));
 									double adAngle = Math.abs(Math.atan2(aSeg.yWeightCenter() - dSeg.yWeightCenter(),
-																			aSeg.xWeightCenter() - dSeg.xWeightCenter()));
+																		aSeg.xWeightCenter() - dSeg.xWeightCenter()));
 	
 									/*
 									 * Get average direction and set accept differ
@@ -432,150 +589,140 @@ public class Finder {
 										/*
 										 * Add AMD logo into list as found logos!
 										 */
-										amdSegments.add(new AMDSegment(aSeg, mSeg, dSeg));
+										amds.add(new AMDSegment(aSeg, mSeg, dSeg));
 								}
 						}
 					}
 			}
 		}
-	}
-	/**
-	 * Check probability of assigning to BOTTOM_LEFT_BOXY letter
-	 * 
-	 * @param segment Segment to check
-	 * @return Probability of match or 0 if doesn't match at all
-	 */
-	private double checkIfBottomLeftBoxy(Segment segment) {
-		/*
-		 * Computed ranges
-		 */
-		double M7 = 0.01006087606634447,	m7l = 0.00893095564700503,	m7r = 0.010612771903258118;
-		double W8 = 0.27841615088534183,	w8l = 0.22748815165876776,	w8r = 0.3584905660377358;
-		double W7 = 0.09584026292864498,	w7l = 0.0,	w7r = 0.2;
-		double W9 = 0.6191299122404113,	w9l = 0.5570199036889057,	w9r = 0.6812722500195435;
-		double M3 = 0.0032730671570117787,	m3l = 0.0021232435303287973,	m3r = 0.007387269873406151;
-		double M1 = 0.2277520247833174,	m1l = 0.20527777777777778,	m1r = 0.3011525620554507;
-
-		/*
-		 * Left, right expand
-		 */
-		double lr = 0.9, rl = 1.1;
 		
-		m7l *= lr;
-		m7r *= rl;
-		w8l *= lr;
-		w8r *= rl;
-		w7l *= lr;
-		w7r *= rl;
-		w9l *= lr;
-		w9r *= rl;
-		m3l *= lr;
-		m3r *= rl;
-		m1l *= lr;
-		m1r *= rl;
+		return amds;
+	}
 
-		double prob = 0;
+	/**
+	 * Check corresponding sizes, distances and directions to find Boxes
+	 * 
+	 * @return List of Boxes combination segments
+	 */
+	private ArrayList<AMDSegment> findBoxes() {
+		/*
+		 * Array for Boxes combination
+		 */
+		ArrayList<AMDSegment> boxes = new ArrayList<>();
 
 		/*
-		 * Check if match in range
+		 * List of each segments type
 		 */
-		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
-			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+		ArrayList<Segment> blbSegments = new ArrayList<>();
+		ArrayList<Segment> trbSegments = new ArrayList<>();
 
-			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
-				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
+		/*
+		 * Assign them onto proper list
+		 */
+		for (Segment segment : possibleSegments)
+			if (segment.type == SegmentType.BOTTOM_LEFT_BOXY)
+				blbSegments.add(segment);
+			else if (segment.type == SegmentType.TOP_RIGHT_BOXY)
+				trbSegments.add(segment);
+
+		/*
+		 * Go through each segments
+		 */
+		for (Segment blbSeg : blbSegments) {
+			int blbMaxSize = Math.max(blbSeg.getSegmentWidth(), blbSeg.getSegmentHeight());
+
+			/*
+			 * With next one
+			 */
+			for (Segment trbSeg : trbSegments) {
+				// Calculate distance between weight centers of considered segments
+				double d = pointToPointDistance(blbSeg.xWeightCenter(), blbSeg.yWeightCenter(), trbSeg.xWeightCenter(),
+																							trbSeg.yWeightCenter());
+
+				int trbMaxSize = Math.max(trbSeg.getSegmentWidth(), trbSeg.getSegmentHeight());
+
+				/*
+				 * If distance is not to big
+				 */
+				if (d < blbMaxSize / 2 + trbMaxSize / 2 +
+												Math.min(trbSeg.getSegmentWidth(), trbSeg.getSegmentHeight()) * 0.3)
+						/*
+						 * And if there are in similar size
+						 */
+						if (Math.max(blbMaxSize, trbMaxSize) / Math.min(blbMaxSize, trbMaxSize) < 4)
+							boxes.add(new AMDSegment(blbSeg, trbSeg));
+			}
+		}
+		
+		return boxes;
+	}
+
+	/**
+	 * Find combinations between AMDs and Boxes
+	 * Add combination to finish list of segments if found combination
+	 * if no just add AMD or Boxy segment
+	 * 
+	 * @param amds List of AMD segments found
+	 * @param boxes List of Boxy segments found
+	 */
+	private void findLogos(ArrayList<AMDSegment> amds, ArrayList<AMDSegment> boxes) {
+		ArrayList<Integer> usedIds = new ArrayList<>();
+
+		for (AMDSegment amd : amds) {
+			int amdMaxX = amd.getMaxX();
+			int amdMinX = amd.getMinX();
+			int amdMaxY = amd.getMaxY();
+			int amdMinY = amd.getMinY();
+
+			int amdWidth = amd.getMaxX() - amd.getMinX();
+			int amdHeight = amd.getMaxY() - amd.getMinY();
+
+			for (AMDSegment boxy : boxes) {
+				int boxyMaxX = boxy.getMaxX();
+				int boxyMinX = boxy.getMinX();
+				int boxyMaxY = boxy.getMaxY();
+				int boxyMinY = boxy.getMinY();
+
+				double distance = pointToPointDistance((amdMaxX + amdMinX) / 2, (amdMaxY + amdMinY) / 2,
+														(boxyMaxX + boxyMinX) / 2, (boxyMaxY + boxyMinY) / 2);
 				
-				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
-					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
+				int boxyWidth = boxy.getMaxX() - boxy.getMinX();
+				int boxyHeight = boxy.getMaxY() - boxy.getMinY();
 
-					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
-						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
+				if (distance < Math.max(amdWidth, amdHeight) / 2 + Math.max(boxyWidth, boxyHeight) / 2 + 
+								Math.min(amdWidth, Math.min(amdHeight, Math.min(boxyWidth, boxyHeight))) / 2) {
+					/*
+					 * Put found segment into finish logos list
+					 */
+					AMDSegment found = new AMDSegment();
+					
+					for (Segment segment : amd.getSegments())
+						found.addSegment(segment);
 
-						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
-							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
+					for (Segment segment : boxy.getSegments())
+						found.addSegment(segment);
 
-							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
-								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
-								
-								return prob;
-							}
-						}
-					}
+					amdSegments.add(found);
+					
+					// Mark segments as used to combine big logo
+					usedIds.add(amd.id);
+					usedIds.add(boxy.id);
 				}
 			}
 		}
 
-		return 0;
-	}
-
-	/**
-	 * Check probability of assigning to TOP_RIGHT_BOXY letter
-	 * 
-	 * @param segment Segment to check
-	 * @return Probability of match or 0 if doesn't match at all
-	 */
-	private double checkIfTopRightBoxy(Segment segment) {
-		/*
-		 * Computed ranges
-		 */
-		double M7 = 0.016750583364079735,	m7l = 0.01460895109865161,	m7r = 0.01862475224489796;
-		double W8 = 0.28129323266771716,	w8l = 0.24170616113744076,	w8r = 0.3440366972477064;
-		double W7 = 0.034393487345838504,	w7l = 0.0,	w7r = 0.0625;
-		double W9 = 0.5355766842288621,	w9l = 0.43022679814997716,	w9r = 0.61744742344133;
-		double M3 = 0.030138853380037044,	m3l = 0.017385017354562094,	m3r = 0.08499255340048821;
-		double M1 = 0.3512951154473476,	m1l = 0.2863000524692911,	m1r = 0.5873122448979592;
-
-
-		/*
-		 * Left, right expand
-		 */
-		double lr = 0.9, rl = 1.1;
 		
-		m7l *= lr;
-		m7r *= rl;
-		w8l *= lr;
-		w8r *= rl;
-		w7l *= lr;
-		w7r *= rl;
-		w9l *= lr;
-		w9r *= rl;
-		m3l *= lr;
-		m3r *= rl;
-		m1l *= lr;
-		m1r *= rl;
-
-		double prob = 0;
-
 		/*
-		 * Check if match in range
+		 * Add unused segments in combining to result list
 		 */
-		if (segment.getMoment(7) >= m7l && segment.getMoment(7) <= m7r) {
-			prob += Math.abs(M7 - segment.getMoment(7));// / (m7r - m7l);
+		
+		for (AMDSegment amd : amds)
+			if (!usedIds.contains(amd.id))
+				amdSegments.add(amd);
 
-			if (segment.getMoment(3) >= m3l && segment.getMoment(3) <= m3r) {
-				prob += Math.abs(M3 - segment.getMoment(3));// / (m3r - m3l);
-				
-				if (segment.getWoment(7) >= w7l && segment.getWoment(7) <= w7r) {
-					prob += Math.abs(W7 - segment.getWoment(7));// / (w7r - w7l);
-
-					if (segment.getWoment(8) >= w8l && segment.getWoment(8) <= w8r) {
-						prob += Math.abs(W8 - segment.getWoment(8));// / (w8r - w8l);
-
-						if (segment.getWoment(9) >= w9l && segment.getWoment(9) <= w9r) {
-							prob += Math.abs(W9 - segment.getWoment(9));// / (w9r - w9l);
-
-							if (segment.getMoment(1) >= m1l && segment.getMoment(1) <= m1r) {
-								prob += Math.abs(M1 - segment.getMoment(1));// / (m1r - m1l);
-								
-								return prob;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		return 0;
+		for (AMDSegment boxy : boxes)
+			if (!usedIds.contains(boxy.id))
+				amdSegments.add(boxy);
 	}
 
 	/**

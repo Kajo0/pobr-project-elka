@@ -9,8 +9,21 @@ import java.util.LinkedList;
  */
 public class AMDSegment {
 
+	/** Id generator */
+	public static int i = 0;
+	
+	/** Id used to combine pair of AMDSegments (AMD + Boxies) */
+	public int id = i++;
+
 	/** List of segments */
 	private LinkedList<Segment> segments = new LinkedList<>();
+
+	/**
+	 * Default empty C-tor
+	 */
+	public AMDSegment() {
+
+	}
 
 	/**
 	 * C-tor
@@ -23,6 +36,17 @@ public class AMDSegment {
 		segments.add(a);
 		segments.add(m);
 		segments.add(d);
+	}
+
+	/**
+	 * C-tor
+	 * 
+	 * @param blb BOTTOM LEFT BOXY segment
+	 * @param trb TOR RIGHT BOXY segment
+	 */
+	public AMDSegment(final Segment blb, final Segment trb) {
+		segments.add(blb);
+		segments.add(trb);
 	}
 	
 	/**
