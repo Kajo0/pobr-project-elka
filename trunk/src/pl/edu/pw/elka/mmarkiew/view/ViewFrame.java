@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -89,6 +90,13 @@ public class ViewFrame extends JFrame {
 				chooser.setMultiSelectionEnabled(true);
 				chooser.setAcceptAllFileFilterUsed(false);
 				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				
+				try {
+					File f = new File(new File(".").getCanonicalPath());
+				    chooser.setCurrentDirectory(f);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 
 				chooser.setFileFilter(new FileFilter() {
 					@Override
